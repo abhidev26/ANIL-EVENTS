@@ -1,0 +1,57 @@
+
+{
+  "id": "./",
+  "name": "Anil Events | Premium Event Management",
+  "short_name": "Anil Events",
+  "description": "Create unforgettable celebrations with Anil Events. Explore wedding decorations, birthday celebrations, event packages, and personalized event planning in Uppinangady, Karnataka.",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0b0b0b",
+  "background_color": "#0b0b0b",
+  "categories": [
+    "lifestyle",
+    "entertainment",
+    "shopping"
+  ],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Book an Event",
+      "short_name": "Book Event",
+      "description": "Start planning your event with Anil Events",
+      "url": "./index.html#booking",
+      "icons": [
+        {
+          "src": "./icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Explore Gallery",
+      "short_name": "Gallery",
+      "description": "Explore event decorations and celebrations",
+      "url": "./index.html#gallery",
+      "icons": [
+        {
+          "src": "./icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}
