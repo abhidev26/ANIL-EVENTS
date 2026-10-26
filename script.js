@@ -1404,3 +1404,449 @@ function initSmoothNavigation() {
     });
   });
 }
+
+/* ============================================
+   ANIL EVENTS — INTERACTIVE FEATURES ADD-ON
+   Append this to the bottom of script.js
+============================================ */
+
+(() => {
+  "use strict";
+
+  const initAnilExtras = () => {
+    /* ---------- Gallery search + favourites ---------- */
+    const gallery = document.querySelector(".gallery-grid");
+    const search = document.getElementById("gallery-search");
+    const favouritesToggle = document.getElementById("show-favourites");
+    const favouriteCount = document.getElementById("favourite-count");
+    const results = document.getElementById("gallery-results");
+
+    const FAVOURITES_KEY = "anilEventsGalleryFavourites";
+    let favourites = new Set();
+
+    try {
+      const saved = JSON.parse(localStorage.getItem(FAVOURITES_KEY) || "[]");
+      if (Array.isArray(saved)) favourites = new Set(saved);
+    } catch (error) {
+      console.warn("Gallery favourites could not be loaded.");
+    }
+
+    let favouritesOnly = false;
+
+    const getCardKey = (card, index) =>
+      card.dataset.image ||
+      card.querySelector("img")?.currentSrc ||
+      card.querySelector("img")?.src ||
+      `gallery-${index}`;
+
+    if (gallery) {
+      const cards = Array.from(gallery.querySelectorAll(".gallery-item"));
+
+      cards.forEach((card, index) => {
+        const key = getCardKey(card, index);
+        card.dataset.favouriteKey = key;
+
+        // Use a span instead of a nested button because each gallery card
+        // is already a button in the supplied HTML.
+        let favouriteControl = card.querySelector(".gallery-favourite");
+
+        if (!favouriteControl) {
+          favouriteControl = document.createElement("span");
+          favouriteControl.className = "gallery-favourite";
+          favouriteControl.setAttribute("role", "button");
+          favouriteControl.setAttribute("tabindex", "0");
+          favouriteControl.setAttribute(
+            "aria-label",
+            "Add this design to favourites"
+          );
+          favouriteControl.setAttribute("aria-pressed", "false");
+          favouriteControl.textContent = "♡";
+          card.appendChild(favouriteControl);
+        }
+
+        const updateFavouriteControl = () => {
+          const isFavourite = favourites.has(key);
+          favouriteControl.setAttribute(
+            "aria-pressed",
+            String(isFavourite)
+          );
+          favouriteControl.textContent = isFavourite ? "♥" : "♡";
+          favouriteControl.setAttribute(
+            "aria-label",
+            isFavourite
+              ? "Remove this design from favourites"
+              : "Add this design to favourites"
+          );
+        };
+
+        const toggleFavourite = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+
+          if (favourites.has(key)) {
+            favourites.delete(key);
+          } else {
+            favourites.add(key);
+          }
+
+          try {
+            localStorage.setItem(
+              FAVOURITES_KEY,
+              JSON.stringify(Array.from(favourites))
+            );
+          } catch (error) {
+            console.warn("Browser storage is unavailable.");
+          }
+
+          updateFavouriteControl();
+          updateFavouriteCount();
+          applyGalleryExtras();
+        };
+
+        favouriteControl.addEventListener("click", toggleFavourite);
+        favouriteControl.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            toggleFavourite(event);
+          }
+        });
+
+        updateFavouriteControl();
+      });
+
+      function updateFavouriteCount() {
+        if (favouriteCount) {
+          favouriteCount.textContent = String(favourites.size);
+        }
+      }
+
+      function applyGalleryExtras() {
+        const query = (search?.value || "").trim().toLowerCase();
+        const activeFilter =
+          document.querySelector(".filter-btn.active")?.dataset.filter || "all";
+
+        let visibleCount = 0;
+
+        cards.forEach((card) => {
+          const category = (card.dataset.category || "").toLowerCase();
+          const imageAlt = card.querySelector("img")?.alt || "";
+          const cardText = card.innerText || "";
+          const searchable = `${category} ${imageAlt} ${cardText}`.toLowerCase();
+          const categoryMatches =
+            activeFilter === "all" || category === activeFilter;
+          const searchMatches = !query || searchable.includes(query);
+          const favouriteMatches =
+            !favouritesOnly || favourites.has(card.dataset.favouriteKey);
+
+          const visible =
+            categoryMatches && searchMatches && favouriteMatches;
+
+          card.classList.toggle("is-filtered-out", !visible);
+          card.hidden = !visible;
+
+          if (visible) visibleCount++;
+        });
+
+        if (results) {
+          results.textContent =
+            `${visibleCount} design${visibleCount === 1 ? "" : "s"} shown` +
+            (favouritesOnly ? " in your favourites." : ".");
+        }
+
+        if (favouritesToggle) {
+          favouritesToggle.setAttribute(
+            "aria-pressed",
+            String(favouritesOnly)
+          );
+        }
+      }
+
+      search?.addEventListener("input", applyGalleryExtras);
+
+      favouritesToggle?.addEventListener("click", () => {
+        favouritesOnly = !favouritesOnly;
+        applyGalleryExtras();
+      });
+
+      // Existing category filter buttons are handled by the original script.
+      document.querySelectorAll(".filter-btn[data-filter]").forEach((button) => {
+        button.addEventListener("click", () => {
+          window.setTimeout(applyGalleryExtras, 0);
+        });
+      });
+
+      updateFavouriteCount();
+      applyGalleryExtras();
+    }
+
+    /* ---------- Before / after comparison ---------- */
+    const comparison = document.getElementById("comparison-frame");
+    const comparisonRange = document.getElementById("comparison-range");
+
+    if (comparison && comparisonRange) {
+      const updateComparison = () => {
+        const value = Math.max(
+          0,
+          Math.min(100, Number(comparisonRange.value) || 0)
+        );
+
+        comparison.style.setProperty("--comparison", `${value}%`);
+      };
+
+      comparisonRange.addEventListener("input", updateComparison);
+      updateComparison();
+    }
+
+    /* ---------- Back-to-top control ---------- */
+    const backToTop = document.getElementById("back-to-top");
+
+    if (backToTop) {
+      const updateBackToTop = () => {
+        backToTop.classList.toggle(
+          "is-visible",
+          window.scrollY > 500
+        );
+      };
+
+      window.addEventListener("scroll", updateBackToTop, { passive: true });
+
+      backToTop.addEventListener("click", () => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+
+      updateBackToTop();
+    }
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initAnilExtras, { once: true });
+  } else {
+    initAnilExtras();
+  }
+})();
+```javascript
+/* ==========================================
+   ANIL EVENTS — COMMIT 3
+   PREMIUM MOTION & INTERACTIONS
+========================================== */
+
+(() => {
+  "use strict";
+
+  function initLuxuryExperience() {
+    if (document.documentElement.dataset.luxuryMotionReady === "true") {
+      return;
+    }
+
+    document.documentElement.dataset.luxuryMotionReady = "true";
+
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+    // 1. Glass header reacts to scrolling
+    const header = document.getElementById("site-header");
+
+    function updateHeader() {
+      if (!header) return;
+      header.classList.toggle("scrolled", window.scrollY > 30);
+    }
+
+    updateHeader();
+    window.addEventListener("scroll", updateHeader, { passive: true });
+
+    // 2. Subtle gold pointer glow on desktop
+    if (!reducedMotion && window.matchMedia("(pointer: fine)").matches) {
+      let scheduled = false;
+
+      window.addEventListener("pointermove", (event) => {
+        if (scheduled) return;
+        scheduled = true;
+
+        window.requestAnimationFrame(() => {
+          document.documentElement.style.setProperty(
+            "--pointer-x",
+            `${event.clientX}px`
+          );
+          document.documentElement.style.setProperty(
+            "--pointer-y",
+            `${event.clientY}px`
+          );
+          scheduled = false;
+        });
+      }, { passive: true });
+    }
+
+    // 3. Reveal sections as they enter the screen
+    const revealTargets = document.querySelectorAll(
+      ".section-heading, .intro-label, .intro-content, " +
+      ".service-card, .package-card, .gallery-item, " +
+      ".estimate-card, .booking-info, .booking-form, " +
+      ".availability-form, .final-cta .container"
+    );
+
+    if (reducedMotion || !("IntersectionObserver" in window)) {
+      revealTargets.forEach((element) => {
+        element.classList.add("is-visible");
+      });
+    } else {
+      const observer = new IntersectionObserver((entries, currentObserver) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+
+          entry.target.classList.add("is-visible");
+          currentObserver.unobserve(entry.target);
+        });
+      }, {
+        threshold: 0.12,
+        rootMargin: "0px 0px -35px 0px"
+      });
+
+      revealTargets.forEach((element, index) => {
+        element.classList.add("js-reveal");
+
+        if (element.matches(".service-card, .package-card, .gallery-item")) {
+          element.classList.add(`js-reveal-delay-${(index % 3) + 1}`);
+        }
+
+        observer.observe(element);
+      });
+    }
+
+    // 4. Subtle 3D card tilt on desktop only
+    const canTilt =
+      !reducedMotion &&
+      window.matchMedia("(pointer: fine)").matches;
+
+    if (canTilt) {
+      const tiltCards = document.querySelectorAll(
+        ".service-card, .package-card"
+      );
+
+      tiltCards.forEach((card) => {
+        card.addEventListener("pointermove", (event) => {
+          const rect = card.getBoundingClientRect();
+          const x = (event.clientX - rect.left) / rect.width;
+          const y = (event.clientY - rect.top) / rect.height;
+
+          const rotateY = (x - 0.5) * 4;
+          const rotateX = (0.5 - y) * 4;
+
+          card.style.transform =
+            `perspective(900px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-3px)`;
+        });
+
+        card.addEventListener("pointerleave", () => {
+          card.style.transform = "";
+        });
+
+        card.addEventListener("blur", () => {
+          card.style.transform = "";
+        });
+      });
+    }
+
+    // 5. Elegant hero particle decoration
+    const hero = document.querySelector(".hero-section");
+
+    if (hero && !reducedMotion && !hero.querySelector(".luxury-particles")) {
+      const particleLayer = document.createElement("div");
+      particleLayer.className = "luxury-particles";
+      particleLayer.setAttribute("aria-hidden", "true");
+
+      Object.assign(particleLayer.style, {
+        position: "absolute",
+        inset: "0",
+        overflow: "hidden",
+        pointerEvents: "none",
+        zIndex: "1"
+      });
+
+      for (let i = 0; i < 16; i++) {
+        const particle = document.createElement("span");
+        particle.className = "luxury-particle";
+
+        const size = 2 + Math.random() * 3;
+
+        Object.assign(particle.style, {
+          position: "absolute",
+          left: `${Math.random() * 100}%`,
+          top: `${25 + Math.random() * 70}%`,
+          width: `${size}px`,
+          height: `${size}px`,
+          borderRadius: "50%",
+          background: "#d4af37",
+          opacity: "0",
+          boxShadow: "0 0 12px rgba(212, 175, 55, 0.65)",
+          animation: `luxuryParticleFloat ${6 + Math.random() * 8}s ${Math.random() * 6}s infinite ease-in-out`
+        });
+
+        particleLayer.appendChild(particle);
+      }
+
+      hero.prepend(particleLayer);
+
+      if (!document.getElementById("luxury-particle-styles")) {
+        const style = document.createElement("style");
+        style.id = "luxury-particle-styles";
+        style.textContent = `
+          @keyframes luxuryParticleFloat {
+            0% {
+              opacity: 0;
+              transform: translate3d(0, 20px, 0);
+            }
+            20% { opacity: .65; }
+            75% { opacity: .35; }
+            100% {
+              opacity: 0;
+              transform: translate3d(12px, -70px, 0);
+            }
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .luxury-particles { display: none !important; }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }
+
+    // 6. Smooth anchor navigation with sticky-header offset
+    document.querySelectorAll('a[href^="#"]').forEach((link) => {
+      link.addEventListener("click", (event) => {
+        const targetId = link.getAttribute("href");
+
+        if (!targetId || targetId === "#") return;
+
+        const target = document.querySelector(targetId);
+        if (!target) return;
+
+        event.preventDefault();
+
+        target.scrollIntoView({
+          behavior: reducedMotion ? "auto" : "smooth",
+          block: "start"
+        });
+
+        // Close the mobile menu if it is open
+        const nav = document.getElementById("nav-links");
+        const menuToggle = document.getElementById("menu-toggle");
+
+        if (nav && menuToggle) {
+          nav.classList.remove("active");
+          menuToggle.setAttribute("aria-expanded", "false");
+        }
+      });
+    });
+
+    console.info("Anil Events luxury motion experience initialized.");
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initLuxuryExperience, {
+      once: true
+    });
+  } else {
+    initLuxuryExperience();
+  }
+})();
+```
