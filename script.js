@@ -1849,4 +1849,204 @@ function initSmoothNavigation() {
     initLuxuryExperience();
   }
 })();
+``````javascript
+/* ==========================================
+   COMMIT 4 — CUSTOM EVENT BUILDER LOGIC
+========================================== */
+
+(() => {
+  "use strict";
+
+  function initEventBuilder() {
+    const form = document.getElementById("event-builder-form");
+    if (!form || form.dataset.initialized === "true") return;
+
+    form.dataset.initialized = "true";
+
+    const packageSelect = document.getElementById("builder-package");
+    const addonInputs = [...document.querySelectorAll(".builder-addon")];
+    const guestInput = document.getElementById("builder-guests");
+
+    const packageOutput = document.getElementById("builder-summary-package");
+    const countOutput = document.getElementById("builder-summary-count");
+    const guestsOutput = document.getElementById("builder-summary-guests");
+    const servicesOutput = document.getElementById("builder-summary-services");
+    const totalOutput = document.getElementById("builder-total");
+    const messageOutput = document.getElementById("builder-message");
+
+    const whatsappButton = document.getElementById("builder-whatsapp");
+    const resetButton = document.getElementById("builder-reset");
+
+    const formatMoney = (amount) =>
+      new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        maximumFractionDigits: 0
+      }).format(amount);
+
+    function getQuotation() {
+      const selectedPackage =
+        packageSelect.options[packageSelect.selectedIndex];
+
+      const packagePrice = Number(selectedPackage.dataset.price || 0);
+      const selectedAddons = addonInputs.filter((item) => item.checked);
+
+      const addonTotal = selectedAddons.reduce(
+        (sum, item) => sum + Number(item.dataset.price || 0),
+        0
+      );
+
+      return {
+        packageName: selectedPackage.textContent.split("—")[0].trim(),
+        packagePrice,
+        selectedAddons,
+        addonTotal,
+        total: packagePrice + addonTotal
+      };
+    }
+
+    function updateQuotation() {
+      const quote = getQuotation();
+      const guests = Math.max(1, Number(guestInput.value) || 1);
+
+      packageOutput.textContent = quote.packageName;
+      countOutput.textContent = `${quote.selectedAddons.length} selected`;
+      guestsOutput.textContent = guests.toLocaleString("en-IN");
+      totalOutput.textContent = formatMoney(quote.total);
+
+      servicesOutput.replaceChildren();
+
+      if (quote.selectedAddons.length === 0) {
+        const item = document.createElement("li");
+        item.textContent = "No additional services selected";
+        servicesOutput.appendChild(item);
+      } else {
+        quote.selectedAddons.forEach((service) => {
+          const item = document.createElement("li");
+          item.textContent =
+            `${service.value} — ${formatMoney(Number(service.dataset.price))}`;
+          servicesOutput.appendChild(item);
+        });
+      }
+
+      // Clear old status when the customer changes selections
+      messageOutput.textContent = "";
+    }
+
+    packageSelect.addEventListener("change", updateQuotation);
+    guestInput.addEventListener("input", updateQuotation);
+
+    addonInputs.forEach((input) => {
+      input.addEventListener("change", updateQuotation);
+    });
+
+    // Create a WhatsApp quotation
+    whatsappButton.addEventListener("click", () => {
+      const quote = getQuotation();
+
+      const event = document.getElementById("builder-event").value;
+      const guests = guestInput.value;
+      const date = document.getElementById("builder-date").value;
+      const location = document.getElementById("builder-location").value.trim();
+      const name = document.getElementById("builder-name").value.trim();
+      const phone = document.getElementById("builder-phone").value.trim();
+      const notes = document.getElementById("builder-notes").value.trim();
+
+      if (!name) {
+        messageOutput.textContent = "Please enter your name.";
+        document.getElementById("builder-name").focus();
+        return;
+      }
+
+      if (!/^[6-9]\d{9}$/.test(phone)) {
+        messageOutput.textContent = "Please enter a valid 10-digit mobile number.";
+        document.getElementById("builder-phone").focus();
+        return;
+      }
+
+      if (!guests || Number(guests) < 1 || Number(guests) > 10000) {
+        messageOutput.textContent = "Please enter a valid guest count.";
+        guestInput.focus();
+        return;
+      }
+
+      if (date) {
+        const chosenDate = new Date(`${date}T00:00:00`);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (Number.isNaN(chosenDate.getTime()) || chosenDate < today) {
+          messageOutput.textContent = "Please choose today or a future event date.";
+          document.getElementById("builder-date").focus();
+          return;
+        }
+      }
+
+      const serviceLines = quote.selectedAddons.length
+        ? quote.selectedAddons.map((service) =>
+            `• ${service.value}: ${formatMoney(Number(service.dataset.price))}`
+          ).join("\n")
+        : "No additional services selected";
+
+      const message = [
+        "Hello Anil Events! I would like a customised event quotation.",
+        "",
+        `Name: ${name}`,
+        `Phone: ${phone}`,
+        `Event: ${event}`,
+        `Package: ${quote.packageName}`,
+        `Expected guests: ${guests}`,
+        `Event date: ${date || "Not decided"}`,
+        `Location: ${location || "Not decided"}`,
+        "",
+        "Selected additional services:",
+        serviceLines,
+        "",
+        `Estimated total: ${formatMoney(quote.total)}`,
+        "",
+        `Special requests: ${notes || "None"}`,
+        "",
+        "Please contact me to discuss the final quotation."
+      ].join("\n");
+
+      const whatsappURL =
+        "https://wa.me/919740767446?text=" + encodeURIComponent(message);
+
+      const newWindow = window.open(
+        whatsappURL,
+        "_blank",
+        "noopener,noreferrer"
+      );
+
+      if (!newWindow) {
+        messageOutput.textContent =
+          "WhatsApp could not open. Please allow pop-ups and try again.";
+        return;
+      }
+
+      messageOutput.textContent =
+        "Your quotation message is ready in WhatsApp. Review it and press Send.";
+    });
+
+    // Reset the builder
+    resetButton.addEventListener("click", () => {
+      form.reset();
+      updateQuotation();
+      messageOutput.textContent = "Your event selections have been reset.";
+    });
+
+    // Initial calculation
+    updateQuotation();
+
+    console.info("Anil Events custom event builder initialized.");
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initEventBuilder, {
+      once: true
+    });
+  } else {
+    initEventBuilder();
+  }
+})();
 ```
