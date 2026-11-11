@@ -4044,3 +4044,165 @@ a:focus-visible {
     margin-left: 68px;
   }
 }
+/* COMMIT 5 — PREMIUM ADMIN DASHBOARD */
+.admin-upgrade {
+  margin: 28px 0;
+  color: #f7f2e8;
+}
+
+.admin-upgrade-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.admin-upgrade-header h2 {
+  color: #d4af37;
+  margin: 0 0 6px;
+}
+
+.admin-upgrade-header p {
+  color: #aaa;
+  margin: 0;
+}
+
+.admin-upgrade-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.admin-stat-card {
+  padding: 20px;
+  border: 1px solid rgba(212, 175, 55, .25);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #191919, #0c0c0c);
+}
+
+.admin-stat-card span {
+  display: block;
+  color: #aaa;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.admin-stat-card strong {
+  color: #e6c76a;
+  font-size: 28px;
+}
+
+.admin-upgrade-tools {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.admin-upgrade-tools input,
+.admin-upgrade-tools select {
+  min-width: 180px;
+  flex: 1;
+  padding: 13px 15px;
+  color: #fff;
+  background: #151515;
+  border: 1px solid rgba(212, 175, 55, .3);
+  border-radius: 10px;
+}
+
+.admin-upgrade-tools button {
+  padding: 12px 18px;
+  border: 1px solid #d4af37;
+  border-radius: 10px;
+  background: #d4af37;
+  color: #111;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-upgrade-tools button:hover {
+  background: #f0d477;
+}
+
+.admin-booking-list {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-booking-card {
+  padding: 18px;
+  border: 1px solid rgba(212, 175, 55, .2);
+  border-radius: 14px;
+  background: #121212;
+}
+
+.admin-booking-card h3 {
+  color: #e6c76a;
+  margin: 0 0 12px;
+  overflow-wrap: anywhere;
+}
+
+.admin-booking-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  color: #ccc;
+  font-size: 14px;
+}
+
+.admin-booking-details p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-booking-details b {
+  color: #fff;
+}
+
+.admin-booking-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.admin-booking-actions select {
+  padding: 9px;
+  border-radius: 8px;
+  color: #fff;
+  background: #222;
+  border: 1px solid #806a2d;
+}
+
+.admin-empty {
+  padding: 28px;
+  text-align: center;
+  color: #aaa;
+  border: 1px dashed rgba(212, 175, 55, .35);
+  border-radius: 14px;
+}
+
+.admin-upgrade-note {
+  margin-top: 14px;
+  color: #999;
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .admin-upgrade-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-booking-details {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-upgrade-tools input,
+  .admin-upgrade-tools select {
+    min-width: 100%;
+  }
+}

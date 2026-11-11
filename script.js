@@ -2049,4 +2049,293 @@ function initSmoothNavigation() {
     initEventBuilder();
   }
 })();
-```
+```/* COMMIT 5 — PREMIUM ADMIN DASHBOARD */
+(() => {
+  const ADMIN_KEY = "anilEventsDemoEnquiries";
+  const STATUS_KEY = "anilEventsBookingStatuses";
+
+  const readBookings = () => {
+    try {
+      const data = JSON.parse(localStorage.getItem(ADMIN_KEY) || "[]");
+      if (Array.isArray(data)) return data;
+
+      if (data && Array.isArray(data.enquiries)) return data.enquiries;
+      if (data && Array.isArray(data.bookings)) return data.bookings;
+
+      return [];
+    } catch {
+      return [];
+    }
+  };
+
+  const readStatuses = () => {
+    try {
+      return JSON.parse(localStorage.getItem(STATUS_KEY) || "{}");
+    } catch {
+      return {};
+    }
+  };
+
+  const escapeHTML = (value) =>
+    String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
+  const bookingId = (booking) => {
+    return JSON.stringify(booking);
+  };
+
+  function initAdminUpgrade() {
+    const adminContent = document.getElementById("admin-content");
+    if (!adminContent || adminContent.dataset.upgradeReady === "true") return;
+
+    adminContent.dataset.upgradeReady = "true";
+
+    const dashboard = document.createElement("section");
+    dashboard.className = "admin-upgrade";
+
+    dashboard.innerHTML = `
+      <div class="admin-upgrade-header">
+        <div>
+          <h2>Booking Management</h2>
+          <p>Manage customer enquiries and event requests.</p>
+        </div>
+      </div>
+
+      <div class="admin-upgrade-stats">
+        <div class="admin-stat-card">
+          <span>Total Enquiries</span>
+          <strong id="upgrade-total">0</strong>
+        </div>
+        <div class="admin-stat-card">
+          <span>Confirmed</span>
+          <strong id="upgrade-confirmed">0</strong>
+        </div>
+        <div class="admin-stat-card">
+          <span>Pending</span>
+          <strong id="upgrade-pending">0</strong>
+        </div>
+      </div>
+
+      <div class="admin-upgrade-tools">
+        <input
+          id="upgrade-search"
+          type="search"
+          placeholder="Search customer or event..."
+          aria-label="Search bookings"
+        >
+
+        <select id="upgrade-filter" aria-label="Filter booking status">
+          <option value="all">All bookings</option>
+          <option value="Pending">Pending</option>
+          <option value="Contacted">Contacted</option>
+          <option value="Confirmed">Confirmed</option>
+          <option value="Cancelled">Cancelled</option>
+        </select>
+
+        <button type="button" id="upgrade-refresh">Refresh</button>
+        <button type="button" id="upgrade-export">Export CSV</button>
+      </div>
+
+      <div class="admin-booking-list" id="upgrade-booking-list"></div>
+
+      <p class="admin-upgrade-note">
+        Demo dashboard: records and statuses are stored in this browser only.
+      </p>
+    `;
+
+    adminContent.prepend(dashboard);
+
+    const list = dashboard.querySelector("#upgrade-booking-list");
+    const search = dashboard.querySelector("#upgrade-search");
+    const filter = dashboard.querySelector("#upgrade-filter");
+
+    function render() {
+      const bookings = readBookings();
+      const statuses = readStatuses();
+
+      const confirmed = bookings.filter(
+        (booking) => statuses[bookingId(booking)] === "Confirmed"
+      ).length;
+
+      const pending = bookings.filter(
+        (booking) => !statuses[bookingId(booking)] ||
+          statuses[bookingId(booking)] === "Pending"
+      ).length;
+
+      dashboard.querySelector("#upgrade-total").textContent = bookings.length;
+      dashboard.querySelector("#upgrade-confirmed").textContent = confirmed;
+      dashboard.querySelector("#upgrade-pending").textContent = pending;
+
+      const searchTerm = search.value.trim().toLowerCase();
+      const selectedStatus = filter.value;
+
+      const filtered = bookings
+        .map((booking, index) => ({ booking, index }))
+        .filter(({ booking }) => {
+          const status = statuses[bookingId(booking)] || "Pending";
+          const searchable = Object.values(booking || {})
+            .join(" ")
+            .toLowerCase();
+
+          return (
+            searchable.includes(searchTerm) &&
+            (selectedStatus === "all" || status === selectedStatus)
+          );
+        });
+
+      if (!filtered.length) {
+        list.innerHTML = `
+          <div class="admin-empty">
+            No bookings found. New enquiries will appear here.
+          </div>
+        `;
+        return;
+      }
+
+      list.innerHTML = filtered.map(({ booking, index }) => {
+        const status = statuses[bookingId(booking)] || "Pending";
+
+        const details = Object.entries(booking || {})
+          .filter(([, value]) =>
+            value !== null &&
+            value !== undefined &&
+            typeof value !== "object"
+          )
+          .map(([key, value]) => `
+            <p>
+              <b>${escapeHTML(key.replace(/[_-]/g, " "))}:</b>
+              ${escapeHTML(value)}
+            </p>
+          `)
+          .join("");
+
+        return `
+          <article class="admin-booking-card">
+            <h3>Enquiry #${index + 1}</h3>
+
+            <div class="admin-booking-details">
+              ${details || "<p>No booking details available.</p>"}
+            </div>
+
+            <div class="admin-booking-actions">
+              <label>
+                Status:
+                <select
+                  class="upgrade-status"
+                  data-booking-index="${index}"
+                  aria-label="Change booking status"
+                >
+                  ${["Pending", "Contacted", "Confirmed", "Cancelled"]
+                    .map(option => `
+                      <option value="${option}"
+                        ${status === option ? "selected" : ""}>
+                        ${option}
+                      </option>
+                    `).join("")}
+                </select>
+              </label>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    list.addEventListener("change", (event) => {
+      if (!event.target.matches(".upgrade-status")) return;
+
+      const index = Number(event.target.dataset.bookingIndex);
+      const bookings = readBookings();
+      const booking = bookings[index];
+
+      if (!booking) return;
+
+      const statuses = readStatuses();
+      statuses[bookingId(booking)] = event.target.value;
+
+      localStorage.setItem(STATUS_KEY, JSON.stringify(statuses));
+      render();
+    });
+
+    search.addEventListener("input", render);
+    filter.addEventListener("change", render);
+
+    dashboard.querySelector("#upgrade-refresh")
+      .addEventListener("click", render);
+
+    dashboard.querySelector("#upgrade-export")
+      .addEventListener("click", () => {
+        const bookings = readBookings();
+        const statuses = readStatuses();
+
+        if (!bookings.length) {
+          alert("No enquiries available to export.");
+          return;
+        }
+
+        const headers = [
+          ...new Set(bookings.flatMap(booking => Object.keys(booking || {}))),
+          "admin_status"
+        ];
+
+        const csvCell = (value) =>
+          `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+        const rows = bookings.map(booking => {
+          const row = headers.map(header => {
+            if (header === "admin_status") {
+              return statuses[bookingId(booking)] || "Pending";
+            }
+            return booking?.[header] ?? "";
+          });
+
+          return row.map(csvCell).join(",");
+        });
+
+        const csv = [
+          headers.map(csvCell).join(","),
+          ...rows
+        ].join("\n");
+
+        const blob = new Blob(["\uFEFF" + csv], {
+          type: "text/csv;charset=utf-8;"
+        });
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = "anil-events-enquiries.csv";
+        link.click();
+
+        URL.revokeObjectURL(url);
+      });
+
+    render();
+  }
+
+  // Initialize only when the existing admin panel is available.
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initAdminUpgrade);
+  } else {
+    initAdminUpgrade();
+  }
+
+  // Refresh when the existing admin panel is opened.
+  const adminContent = document.getElementById("admin-content");
+
+  if (adminContent) {
+    new MutationObserver(() => {
+      const dashboard = adminContent.querySelector(".admin-upgrade");
+      if (dashboard) {
+        dashboard.querySelector("#upgrade-refresh")?.click();
+      }
+    }).observe(adminContent, {
+      attributes: true,
+      attributeFilter: ["style", "class"]
+    });
+  }
+})();
